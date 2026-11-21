@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Nuevo pedido{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Nuevo pedido</h1>
+
+  <div class="fm-card-fog">
+    <p class="fm-muted fm-mb-24">
+      Agrega los productos que vas a pedir (pueden ser de distintos proveedores).
+      El cliente es opcional - solo lo necesitas si este pedido es para alguien
+      en particular.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="fm-field" style="max-width:320px;">
+        {{ pedido_form.sucursal.label_tag }}
+        {{ pedido_form.sucursal }}
+        <p class="fm-muted" style="font-size:var(--font-size-sm);margin-top:4px;">{{ pedido_form.sucursal.help_text }}</p>
+        {% if pedido_form.sucursal.errors %}<div class="fm-errors">{{ pedido_form.sucursal.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      <div class="fm-field" style="max-width:320px;">
+        {{ pedido_form.cliente.label_tag }}
+        {{ pedido_form.cliente }}
+        {% if pedido_form.cliente.errors %}<div class="fm-errors">{{ pedido_form.cliente.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      {{ formset.management_form }}
+
+      <div class="fm-row" style="margin-bottom:8px;">
+        <p class="fm-label" style="margin-bottom:0;">Productos</p>
+        <button type="button" id="btn-agregar-linea" class="btn btn-outline btn-sm">+ Agregar otro producto</button>
+      </div>
+      <table class="fm-table fm-mb-24" id="tabla-lineas">
+        <thead><tr><th>Producto</th><th>Cantidad</th></tr></thead>
+        <tbody>
+          {% for linea in formset %}
+          <tr class="fila-pedido">
+            <td>
+              <div class="fm-pedido-producto-picker" style="position:relative;">
+                <div class="fm-row" style="gap:4px;flex-wrap:nowrap;">
+                  <input type="text" class="fm-input fm-pedido-producto-buscador" placeholder="Código o nombre..." autocomplete="off" style="flex:1;">
+                  {% if empresa.modulo_codigo_barras %}<button type="button" class="btn btn-outline btn-sm fm-pedido-producto-escanear">Escanear</button>{% endif %}
+                </div>
+                <select class="fm-input fm-pedido-producto-filtro-cat" style="margin-top:4px;font-size:var(--font-size-sm);">
+                  <option value="">Todas las categorías</option>
+                  {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+                </select>
+                <div class="fm-dropdown fm-pedido-producto-dropdown" hidden></div>
+                <div class="fm-pedido-producto-select-wrap" hidden>{{ linea.producto }}</div>
+              </div>
+            </td>
+            <td>{{ linea.cantidad }}</td>
+          </tr>
+          {% if linea.errors %}
+          <tr><td colspan="2"><div class="fm-errors">{{ linea.errors }}</div></td></tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <template id="fila-template">
+        <tr class="fila-pedido">
+          <td>
+            <div class="fm-pedido-producto-picker" style="position:relative;">
+              <div class="fm-row" style="gap:4px;flex-wrap:nowrap;">
+                <input type="text" class="fm-input fm-pedido-producto-buscador" placeholder="Código o nombre..." autocomplete="off" style="flex:1;">
+                {% if empresa.modulo_codigo_barras %}<button type="button" class="btn btn-outline btn-sm fm-pedido-producto-escanear">Escanear</button>{% endif %}
+              </div>
+              <select class="fm-input fm-pedido-producto-filtro-cat" style="margin-top:4px;font-size:var(--font-size-sm);">
+                <option value="">Todas las categorías</option>
+                {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+              </select>
+              <div class="fm-dropdown fm-pedido-producto-dropdown" hidden></div>
+              <div class="fm-pedido-producto-select-wrap" hidden>{{ formset.empty_form.producto }}</div>
+            </div>
+          </td>
+          <td>{{ formset.empty_form.cantidad }}</td>
+        </tr>
+      </template>
+      {% if formset.non_form_errors %}<div class="fm-errors fm-mb-24">{{ formset.non_form_errors }}</div>{% endif %}
+
+      <button type="submit" class="btn btn-primary btn-block">Guardar pedido</button>
+    </form>
+  </div>
+  <a href="{% url 'pedidos:lista' %}" class="btn btn-ghost" style="padding-left:0;">← Cancelar</a>
+</div>
+
+<script>
+function indexarOpcionesProductoPedido(select) {
+  var indice = [];
+  Array.prototype.forEach.call(select.options, function (opt) {
+    if (!opt.value) return;
+    indice.push({
+      id: opt.value,
+      texto: opt.textContent,
+      categorias: (opt.dataset.categorias || '').split(',').filter(Boolean),
+    });
+  });
+  return indice;
+}
+
+function activarBuscadorProductoPedido(fila) {
+  var selectWrap = fila.querySelector('.fm-pedido-producto-select-wrap');
+  var select = selectWrap.querySelector('select');
+  var input = fila.querySelector('.fm-pedido-producto-buscador');
+  var filtroCategoria = fila.querySelector('.fm-pedido-producto-filtro-cat');
+  var dropdown = fila.querySelector('.fm-pedido-producto-dropdown');
+  var indice = indexarOpcionesProductoPedido(select);
+
+  if (select.value) {
+    var actual = indice.filter(function (p) { return p.id === select.value; })[0];
+    if (actual) input.value = actual.texto;
+  }
+
+  function cerrarDropdown() {
+    dropdown.hidden = true;
+    dropdown.innerHTML = '';
+  }
+
+  function elegir(id, texto) {
+    select.value = id;
+    input.value = texto;
+    cerrarDropdown();
+  }
+
+  function render() {
+    var texto = input.value.trim().toLowerCase();
+    var catId = filtroCategoria.value;
+    if (!texto && !catId) {
+      cerrarDropdown();
+      return;
+    }
+
+    var coincidencias = indice.filter(function (p) {
+      var pasaTexto = !texto || p.texto.toLowerCase().indexOf(texto) !== -1;
+      var pasaCategoria = !catId || p.categorias.indexOf(catId) !== -1;
+      return pasaTexto && pasaCategoria;
+    });
+
+    dropdown.innerHTML = '';
+    if (!coincidencias.length) {
+      var vacio = document.createElement('div');
+      vacio.className = 'fm-dropdown-item fm-muted';
+      vacio.textContent = 'Sin resultados';
+      dropdown.appendChild(vacio);
+    }
+    coincidencias.slice(0, 40).forEach(function (p) {
+      var item = document.createElement('div');
+      item.className = 'fm-dropdown-item';
+      item.textContent = p.texto;
+      item.addEventListener('click', function () { elegir(p.id, p.texto); });
+      dropdown.appendChild(item);
+    });
+    dropdown.hidden = false;
+  }
+
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  filtroCategoria.addEventListener('change', render);
+  document.addEventListener('click', function (e) {
+    if (!dropdown.contains(e.target) && e.target !== input && e.target !== filtroCategoria) {
+      cerrarDropdown();
+    }
+  });
+
+  var btnEscanear = fila.querySelector('.fm-pedido-producto-escanear');
+  if (btnEscanear) {
+    btnEscanear.addEventListener('click', function () {
+      abrirEscanerCodigoBarras(function (codigoLeido) {
+        input.value = codigoLeido;
+        render();
+        var exacto = indice.filter(function (p) {
+          return p.texto.split(' - ')[0].toLowerCase() === codigoLeido.toLowerCase();
+        })[0];
+        if (exacto) elegir(exacto.id, exacto.texto);
+      });
+    });
+  }
+}
+
+document.querySelectorAll('#tabla-lineas .fila-pedido').forEach(activarBuscadorProductoPedido);
+
+document.getElementById('btn-agregar-linea').addEventListener('click', function () {
+  var totalInput = document.getElementById('id_form-TOTAL_FORMS');
+  var index = parseInt(totalInput.value, 10);
+  var html = document.getElementById('fila-template').innerHTML.replace(/__prefix__/g, index);
+  document.querySelector('#tabla-lineas tbody').insertAdjacentHTML('beforeend', html);
+  totalInput.value = index + 1;
+  activarBuscadorProductoPedido(document.querySelector('#tabla-lineas tbody').lastElementChild);
+});
+</script>
+{% endblock %}

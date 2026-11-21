@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Configuración de empresa{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <h1 class="fm-heading-sm fm-heading-marked">Configuración de empresa</h1>
+  <div class="fm-card-fog">
+    {% if empresa.logo_url %}
+    <div class="fm-field" style="display:flex;align-items:center;gap:12px;">
+      <img src="{{ empresa.logo_url }}" alt="{{ empresa.nombre }}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;">
+      <span class="fm-muted">Logo actual</span>
+    </div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="fm-field">
+        {{ form.nombre.label_tag }}
+        {{ form.nombre }}
+        {% if form.nombre.errors %}<div class="fm-errors">{{ form.nombre.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field fm-radio-list">
+        <label class="fm-label">Color de marca</label>
+        {{ form.color_tema }}
+        {% if form.color_tema.errors %}<div class="fm-errors">{{ form.color_tema.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.logo.label_tag }}
+        {{ form.logo }}
+        <p class="fm-help">Deja este campo vacío para conservar el logo actual.</p>
+        {% if form.logo.errors %}<div class="fm-errors">{{ form.logo.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        <label class="fm-label">Módulos activos</label>
+        <p class="fm-help" style="margin-top:0;">Desactiva los módulos que tu negocio no use. Se ocultan del menú y de las pantallas relacionadas.</p>
+        <div class="fm-checkbox-field" style="display:flex;align-items:center;gap:8px;">{{ form.modulo_reportes }}{{ form.modulo_reportes.label_tag }}</div>
+        <div class="fm-checkbox-field" style="display:flex;align-items:center;gap:8px;">{{ form.modulo_codigo_barras }}{{ form.modulo_codigo_barras.label_tag }}</div>
+        <div class="fm-checkbox-field" style="display:flex;align-items:center;gap:8px;">{{ form.modulo_pedidos }}{{ form.modulo_pedidos.label_tag }}</div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Guardar cambios</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

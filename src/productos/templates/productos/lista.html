@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Productos{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Productos</h1>
+  {% if perfil.rol == 'dueno' %}
+  <div class="fm-row" style="gap:8px;">
+    <a href="{% url 'productos:reporte' %}" class="btn btn-outline">Reporte PDF</a>
+    <a href="{% url 'productos:crear' %}" class="btn btn-primary">+ Nuevo producto</a>
+  </div>
+  {% endif %}
+</div>
+
+  <div class="fm-row fm-mb-24" style="gap:8px;flex-wrap:nowrap;">
+    <input type="text" name="q" form="form-filtros" value="{{ q }}" placeholder="Buscar por código..."
+           class="fm-input" style="flex:1;">
+    {% if empresa.modulo_codigo_barras %}<button type="button" id="btn-escanear-producto" class="btn btn-outline">Escanear código</button>{% endif %}
+    <button type="submit" form="form-filtros" class="btn btn-primary">Buscar</button>
+  </div>
+
+<button type="button" id="btn-toggle-categorias" class="btn btn-outline fm-side-toggle fm-mb-24">
+  Categorías y filtros ▾
+</button>
+
+<div class="fm-side-layout">
+  <div class="fm-side-main">
+    {% if productos %}
+    <div class="fm-grid">
+      {% for p in productos %}
+      <div class="fm-product-card">
+        <div class="fm-product-card-img">
+          {% if p.imagen_url %}
+            <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}">
+          {% else %}
+            <span class="fm-product-card-placeholder"></span>
+          {% endif %}
+        </div>
+        <div class="fm-product-card-body">
+          <span class="fm-product-card-codigo">{{ p.codigo }}</span>
+          <span class="fm-product-card-nombre">{{ p.nombre }}</span>
+          {% if p.categorias.all or p.proveedor %}
+          <span class="fm-muted" style="font-size:var(--font-size-sm);">
+            {% for c in p.categorias.all %}{{ c.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% if p.categorias.all and p.proveedor %} · {% endif %}{{ p.proveedor.nombre|default:"" }}
+          </span>
+          {% endif %}
+          <div class="fm-product-card-foot">
+            <span>{{ p.precio_venta }} / {{ p.unidad }}</span>
+            {% if p.activo %}<span class="fm-tag fm-tag-success">Activo</span>{% else %}<span class="fm-tag fm-tag-muted">Inactivo</span>{% endif %}
+          </div>
+          <div class="fm-row" style="margin-top:8px;gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm fm-btn-detalle" data-producto-id="{{ p.pk }}">Ver detalle</button>
+            {% if perfil.rol == 'dueno' %}
+            <a href="{% url 'productos:editar' p.pk %}" class="btn btn-outline btn-sm">Editar</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="fm-muted">Aún no hay productos registrados{% if categoria_ids or proveedor_ids or q %} con este filtro{% endif %}.</p>
+    {% endif %}
+  </div>
+
+  <aside class="fm-side-panel" id="panel-categorias">
+    <div class="fm-card-fog fm-mb-24">
+      <h2 class="fm-subheading">Filtrar</h2>
+
+      <div style="position:relative;">
+        {% if perfil.rol == 'dueno' %}
+        <!-- fuera del <form> de filtros a propósito: un <form> no puede ir
+             anidado dentro de otro, el navegador no lo manda bien -->
+        <div id="popover-nueva-categoria" class="fm-popover" hidden>
+          <form method="post" action="{% url 'productos:crear_categoria' %}" style="display:flex;gap:4px;">
+            {% csrf_token %}
+            <input type="text" name="nombre" class="fm-input" placeholder="Nombre" required style="padding:4px 8px;">
+            <button type="submit" class="btn btn-outline btn-sm">Agregar</button>
+          </form>
+        </div>
+        {% endif %}
+
+        <form method="get" id="form-filtros">
+          <details class="fm-filter-section" open>
+            <summary class="fm-filter-header">
+              <span>Categoría</span>
+              <span class="fm-filter-header-actions">
+                {% if perfil.rol == 'dueno' %}
+                <button type="button" id="btn-nueva-categoria" class="btn btn-sm fm-filter-action-btn">+ Nueva</button>
+                {% endif %}
+                <span class="fm-filter-arrow" aria-hidden="true"></span>
+              </span>
+            </summary>
+            <div class="fm-filter-body">
+              {% if categorias %}
+              <div class="fm-row" style="gap:16px;margin-bottom:8px;justify-content:flex-start;">
+                <label>
+                  <input type="radio" name="modo_categoria" value="cualquiera"
+                         {% if modo_categoria != 'especifico' %}checked{% endif %}
+                         onchange="this.form.submit()">
+                  Cualquiera
+                </label>
+                <label>
+                  <input type="radio" name="modo_categoria" value="especifico"
+                         {% if modo_categoria == 'especifico' %}checked{% endif %}
+                         onchange="this.form.submit()">
+                  Específico
+                </label>
+              </div>
+              {% endif %}
+              {% for cat in categorias %}
+              <label>
+                <input type="checkbox" name="categoria" value="{{ cat.id }}"
+                       {% if cat.id|stringformat:"s" in categoria_ids %}checked{% endif %}
+                       onchange="this.form.submit()">
+                {{ cat.nombre }}
+              </label>
+              {% empty %}
+              <p class="fm-muted" style="font-size:var(--font-size-sm);">Aún no hay categorías.</p>
+              {% endfor %}
+            </div>
+          </details>
+
+          {% if proveedores %}
+          <details class="fm-filter-section" open>
+            <summary class="fm-filter-header">
+              <span>Proveedor</span>
+              <span class="fm-filter-arrow" aria-hidden="true"></span>
+            </summary>
+            <div class="fm-filter-body">
+              {% for prov in proveedores %}
+              <label>
+                <input type="checkbox" name="proveedor" value="{{ prov.id }}"
+                       {% if prov.id|stringformat:"s" in proveedor_ids %}checked{% endif %}
+                       onchange="this.form.submit()">
+                {{ prov.nombre }}
+              </label>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
+        </form>
+      </div>
+
+      {% if categoria_ids or proveedor_ids or q %}
+      <a href="{% url 'productos:lista' %}" class="btn btn-ghost btn-sm" style="padding-left:0;">Quitar filtros</a>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+
+<div id="modal-detalle-producto" class="fm-modal-overlay" hidden>
+  <div class="fm-modal fm-modal-wide">
+    <div class="fm-row" style="justify-content:flex-end;margin-bottom:0;">
+      <button type="button" id="btn-cerrar-detalle" class="btn btn-ghost btn-sm">Cerrar</button>
+    </div>
+    <div class="fm-detalle-producto-layout">
+      <div class="fm-detalle-producto-img-col">
+        <div id="detalle-img-wrap"></div>
+        <p class="fm-product-card-codigo" id="detalle-codigo" style="margin-top:8px;"></p>
+        <p class="fm-product-card-nombre" id="detalle-nombre"></p>
+
+        {% if empresa.modulo_codigo_barras %}
+        <div class="fm-field" style="margin-top:12px;">
+          <label class="fm-label" for="input-copias-etiqueta">Copias</label>
+          <div class="fm-row" style="gap:8px;flex-wrap:nowrap;">
+            <input type="number" id="input-copias-etiqueta" class="fm-input" value="1" min="1" max="100" style="width:70px;">
+            <button type="button" id="btn-imprimir-etiqueta" class="btn btn-outline btn-sm">Imprimir etiqueta</button>
+          </div>
+          <p id="estado-imprimir-etiqueta" class="fm-muted" style="font-size:var(--font-size-sm);margin-top:4px;"></p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="fm-detalle-producto-info-col">
+        <p class="fm-muted" style="font-size:var(--font-size-sm);margin:0 0 4px;">
+          <strong>Proveedor:</strong> <span id="detalle-proveedor"></span>
+        </p>
+        <p class="fm-muted" style="font-size:var(--font-size-sm);margin:0 0 4px;">
+          <strong>Categorías:</strong> <span id="detalle-categorias"></span>
+        </p>
+        <p class="fm-muted" style="font-size:var(--font-size-sm);margin:0;">
+          <strong>Creado:</strong> <span id="detalle-fecha"></span>
+        </p>
+
+        <table class="fm-detalle-precios">
+          <tr><td>Precio unitario</td><td id="detalle-precio-venta"></td></tr>
+          <tr><td>Mayorista pequeño</td><td id="detalle-precio-mp"></td></tr>
+          <tr><td>Mayorista grande</td><td id="detalle-precio-mg"></td></tr>
+        </table>
+
+        <div class="fm-row" style="margin-bottom:4px;">
+          <p class="fm-label" style="margin:0;">Historial de existencia</p>
+          <select id="detalle-rango" class="fm-input" style="width:auto;padding:2px 6px;">
+            <option value="1">1 mes</option>
+            <option value="3">3 meses</option>
+            <option value="6">6 meses</option>
+            <option value="12" selected>12 meses</option>
+            <option value="24">24 meses</option>
+          </select>
+        </div>
+        <div id="detalle-grafica" class="fm-chart-wrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if empresa.modulo_codigo_barras %}
+<script src="{% static 'productos/js/BrowserPrint-3.1.250.min.js' %}"></script>
+<script src="{% static 'productos/js/BrowserPrint-Zebra-1.1.250.min.js' %}"></script>
+<script src="{% static 'productos/js/imprimir_etiqueta.js' %}"></script>
+{% endif %}
+
+<script>
+var btnEscanearProducto = document.getElementById('btn-escanear-producto');
+if (btnEscanearProducto) {
+  btnEscanearProducto.addEventListener('click', function () {
+    abrirEscanerCodigoBarras(function (codigo) {
+      var input = document.querySelector('input[name="q"][form="form-filtros"]');
+      input.value = codigo;
+      document.getElementById('form-filtros').submit();
+    });
+  });
+}
+
+document.getElementById('btn-toggle-categorias').addEventListener('click', function () {
+  document.getElementById('panel-categorias').classList.toggle('fm-side-panel-open');
+});
+
+var btnNuevaCategoria = document.getElementById('btn-nueva-categoria');
+if (btnNuevaCategoria) {
+  var popoverCategoria = document.getElementById('popover-nueva-categoria');
+  btnNuevaCategoria.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    popoverCategoria.hidden = !popoverCategoria.hidden;
+    if (!popoverCategoria.hidden) {
+      popoverCategoria.querySelector('input[name="nombre"]').focus();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!popoverCategoria.hidden && !popoverCategoria.contains(e.target) && e.target !== btnNuevaCategoria) {
+      popoverCategoria.hidden = true;
+    }
+  });
+}
+
+(function () {
+  var modal = document.getElementById('modal-detalle-producto');
+  var selectRango = document.getElementById('detalle-rango');
+  var productoActualId = null;
+
+  function cerrarModal() {
+    modal.hidden = true;
+    productoActualId = null;
+  }
+
+  document.getElementById('btn-cerrar-detalle').addEventListener('click', cerrarModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) cerrarModal();
+  });
+
+  document.querySelectorAll('.fm-btn-detalle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      productoActualId = btn.dataset.productoId;
+      selectRango.value = '12';
+      cargarDetalle(productoActualId, 12);
+      var elEstadoInicial = document.getElementById('estado-imprimir-etiqueta');
+      if (elEstadoInicial) elEstadoInicial.textContent = '';
+      modal.hidden = false;
+    });
+  });
+
+  var btnImprimirEtiqueta = document.getElementById('btn-imprimir-etiqueta');
+  if (btnImprimirEtiqueta) {
+    btnImprimirEtiqueta.addEventListener('click', function () {
+      if (!productoActualId) return;
+      var copias = document.getElementById('input-copias-etiqueta').value || 1;
+      var elEstado = document.getElementById('estado-imprimir-etiqueta');
+      imprimirEtiquetaProducto(productoActualId, copias, elEstado);
+    });
+  }
+
+  selectRango.addEventListener('change', function () {
+    if (!productoActualId) return;
+    fetch('/productos/' + productoActualId + '/historial-stock/?meses=' + selectRango.value)
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) { dibujarGrafica(data.labels, data.valores); });
+  });
+
+  function cargarDetalle(id, meses) {
+    fetch('/productos/' + id + '/detalle/?meses=' + meses)
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        document.getElementById('detalle-codigo').textContent = data.codigo;
+        document.getElementById('detalle-nombre').textContent = data.nombre;
+        document.getElementById('detalle-proveedor').textContent = data.proveedor || '—';
+        document.getElementById('detalle-categorias').textContent = data.categorias.length ? data.categorias.join(', ') : '—';
+        document.getElementById('detalle-fecha').textContent = data.fecha_creacion;
+        document.getElementById('detalle-precio-venta').textContent = data.precio_venta;
+        document.getElementById('detalle-precio-mp').textContent = data.precio_mayorista_pequeno;
+        document.getElementById('detalle-precio-mg').textContent = data.precio_mayorista_grande;
+
+        var imgWrap = document.getElementById('detalle-img-wrap');
+        imgWrap.innerHTML = '';
+        if (data.imagen_url) {
+          var img = document.createElement('img');
+          img.src = data.imagen_url;
+          img.alt = data.nombre;
+          imgWrap.appendChild(img);
+        } else {
+          var placeholder = document.createElement('span');
+          placeholder.className = 'fm-product-card-placeholder';
+          imgWrap.appendChild(placeholder);
+        }
+
+        dibujarGrafica(data.historial.labels, data.historial.valores);
+      });
+  }
+
+  function dibujarGrafica(labels, valores) {
+    var contenedor = document.getElementById('detalle-grafica');
+    contenedor.innerHTML = '';
+    if (!valores || !valores.length) {
+      contenedor.innerHTML = '<p class="fm-muted" style="font-size:var(--font-size-sm);">Sin datos de existencia en este rango.</p>';
+      return;
+    }
+
+    var ancho = contenedor.clientWidth || 480;
+    var alto = 200;
+    var margen = { top: 14, right: 12, bottom: 20, left: 36 };
+    var w = Math.max(ancho - margen.left - margen.right, 1);
+    var h = alto - margen.top - margen.bottom;
+
+    var max = Math.max.apply(null, valores);
+    var min = Math.min.apply(null, valores);
+    if (max === min) { max = min + 1; }
+
+    function x(i) { return margen.left + (w * i) / Math.max(valores.length - 1, 1); }
+    function y(v) { return margen.top + h - ((v - min) / (max - min)) * h; }
+
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + ancho + ' ' + alto);
+    svg.setAttribute('height', alto);
+
+    [min, max].forEach(function (v) {
+      var linea = document.createElementNS(svgNS, 'line');
+      linea.setAttribute('x1', margen.left);
+      linea.setAttribute('x2', ancho - margen.right);
+      linea.setAttribute('y1', y(v));
+      linea.setAttribute('y2', y(v));
+      linea.setAttribute('style', 'stroke:#ccc;stroke-dasharray:4;');
+      svg.appendChild(linea);
+
+      var texto = document.createElementNS(svgNS, 'text');
+      texto.setAttribute('x', 2);
+      texto.setAttribute('y', y(v) + 4);
+      texto.setAttribute('style', 'font-size:10px;fill:#666;');
+      texto.textContent = v;
+      svg.appendChild(texto);
+    });
+
+    var puntos = valores.map(function (v, i) { return x(i) + ',' + y(v); }).join(' ');
+    var polilinea = document.createElementNS(svgNS, 'polyline');
+    polilinea.setAttribute('points', puntos);
+    polilinea.setAttribute('style', 'fill:none;stroke:var(--color-accent);stroke-width:2;');
+    svg.appendChild(polilinea);
+
+    valores.forEach(function (v, i) {
+      var circulo = document.createElementNS(svgNS, 'circle');
+      circulo.setAttribute('cx', x(i));
+      circulo.setAttribute('cy', y(v));
+      circulo.setAttribute('r', 3);
+      circulo.setAttribute('style', 'fill:var(--color-accent);stroke:var(--color-paper-white);stroke-width:1;');
+      var titulo = document.createElementNS(svgNS, 'title');
+      titulo.textContent = labels[i] + ': ' + v;
+      circulo.appendChild(titulo);
+      svg.appendChild(circulo);
+    });
+
+    [0, labels.length - 1].forEach(function (i) {
+      var texto = document.createElementNS(svgNS, 'text');
+      texto.setAttribute('x', i === 0 ? margen.left : ancho - margen.right);
+      texto.setAttribute('y', alto - 4);
+      texto.setAttribute('text-anchor', i === 0 ? 'start' : 'end');
+      texto.setAttribute('style', 'font-size:10px;fill:#666;');
+      texto.textContent = labels[i];
+      svg.appendChild(texto);
+    });
+
+    contenedor.appendChild(svg);
+  }
+})();
+</script>
+{% endblock %}

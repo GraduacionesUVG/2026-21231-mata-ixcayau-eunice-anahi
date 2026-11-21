@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}¿Quién eres?{% endblock %}
+{% block content %}
+<div style="max-width:420px;margin:0 auto;">
+  <h1 class="fm-heading-sm">¿Quién eres?</h1>
+  <p class="fm-muted fm-mb-24">Identifícate para este turno.</p>
+
+  {% if perfil.rol == 'dueno' %}
+  <form method="get" class="fm-field">
+    <label class="fm-label" for="id_sucursal">Sucursal</label>
+    <select name="sucursal" id="id_sucursal" class="fm-input" onchange="this.form.submit()">
+      <option value="">Elige una sucursal</option>
+      {% for s in sucursales %}
+      <option value="{{ s.id }}" {% if sucursal.id == s.id %}selected{% endif %}>{{ s.nombre }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% endif %}
+
+  {% if vendedores %}
+  <div class="fm-card-fog">
+    <form method="post">
+      {% csrf_token %}
+      {% if sucursal %}<input type="hidden" name="sucursal" value="{{ sucursal.id }}">{% endif %}
+      <div class="fm-field">
+        <label class="fm-label" for="id_vendedor">Vendedor</label>
+        <select name="vendedor_id" id="id_vendedor" class="fm-input">
+          {% for v in vendedores %}
+          <option value="{{ v.id }}">{{ v.nombre|default:v.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fm-field">
+        <label class="fm-label" for="id_pin">PIN</label>
+        <input type="password" inputmode="numeric" maxlength="4" name="pin" id="id_pin" class="fm-input">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+  </div>
+  {% else %}
+    <p class="fm-muted">
+      {% if perfil.rol == 'dueno' and not sucursal %}
+        Elige una sucursal arriba para ver sus vendedores.
+      {% else %}
+        No hay vendedores activos en esta sucursal.
+      {% endif %}
+    </p>
+  {% endif %}
+</div>
+{% endblock %}

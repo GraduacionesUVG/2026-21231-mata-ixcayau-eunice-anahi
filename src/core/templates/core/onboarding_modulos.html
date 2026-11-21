@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Onboarding: módulos{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <p class="fm-step-label">Paso 3 de 3</p>
+  <div class="fm-progress"><div class="fm-progress-bar" style="width:100%"></div></div>
+
+  <h1 class="fm-heading-sm">¿Qué áreas quieres activar?</h1>
+  <div class="fm-card-fog fm-mb-24">
+    <p class="fm-muted fm-mb-24">
+      Podrás cambiar esto después desde tu panel de inicio. Por ahora solo
+      "Inventario" (vía Sucursales) tiene una pantalla real construida.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="fm-stack fm-mb-24">
+        {% for field in form %}
+        <div style="display:flex;align-items:center;gap:8px;">
+          {{ field }}
+          {{ field.label_tag }}
+        </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Finalizar</button>
+    </form>
+  </div>
+  <a href="{% url 'core:onboarding_negocio' %}" class="btn btn-ghost" style="padding-left:0;">← Atrás</a>
+</div>
+{% endblock %}

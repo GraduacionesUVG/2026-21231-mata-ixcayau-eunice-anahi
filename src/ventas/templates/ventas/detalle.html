@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Venta #{{ venta.id }}{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Venta #{{ venta.id }}</h1>
+
+  <div class="fm-card-fog fm-mb-24">
+    <p><strong>Sucursal:</strong> {{ venta.sucursal.nombre }}</p>
+    <p><strong>Cliente:</strong> {{ venta.cliente.nombre|default:"Anónimo" }}</p>
+    <p><strong>Operador:</strong> {{ venta.operador.nombre|default:venta.operador.email|default:"—" }}</p>
+    <p><strong>Fecha:</strong> {{ venta.fecha|date:"d/m/Y H:i" }}</p>
+  </div>
+
+  <table class="fm-table fm-mb-24">
+    <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
+    <tbody>
+      {% for linea in lineas %}
+      <tr>
+        <td>
+          <div class="fm-linea-producto">
+            <div class="fm-linea-img-wrap">
+              {% if linea.producto.imagen_url %}
+                <img src="{{ linea.producto.imagen_url }}" alt="{{ linea.descripcion }}">
+              {% else %}
+                <span class="fm-product-card-placeholder"></span>
+              {% endif %}
+            </div>
+            <span>{{ linea.descripcion }}</span>
+          </div>
+        </td>
+        <td>{{ linea.cantidad }}</td>
+        <td>{{ linea.precio_unitario }}</td>
+        <td>{{ linea.subtotal }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="3" style="text-align:right;"><strong>Total</strong></td><td><strong>{{ venta.total }}</strong></td></tr>
+    </tfoot>
+  </table>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'ventas:registrar' %}" class="btn btn-primary">+ Nueva venta</a>
+    <a href="{% url 'ventas:detalle_pdf' venta.pk %}" class="btn btn-outline">Descargar PDF</a>
+    <a href="{% url 'ventas:lista' %}" class="btn btn-ghost">← Ver todas las ventas</a>
+  </div>
+</div>
+{% endblock %}

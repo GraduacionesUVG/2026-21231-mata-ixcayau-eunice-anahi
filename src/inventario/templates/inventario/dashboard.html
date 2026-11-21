@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Inventario{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Inventario</h1>
+  {% if perfil.rol == 'dueno' %}
+    <div style="display:flex;gap:8px;">
+      <a href="{% url 'inventario:consolidado' %}" class="btn btn-outline">Ver consolidado</a>
+      <a href="{% url 'inventario:historial' %}" class="btn btn-outline">Historial</a>
+      <a href="{% url 'inventario:transferencia' %}" class="btn btn-outline">Transferir</a>
+      <a href="{% url 'inventario:entrada' %}" class="btn btn-primary">+ Entrada de mercadería</a>
+    </div>
+  {% endif %}
+</div>
+
+{% if perfil.rol == 'dueno' and sucursales.count > 1 %}
+<form method="get" class="fm-field" style="max-width:320px;">
+  <label class="fm-label" for="id_sucursal">Sucursal</label>
+  <select name="sucursal" id="id_sucursal" class="fm-input" onchange="this.form.submit()">
+    {% for s in sucursales %}
+    <option value="{{ s.id }}" {% if sucursal_actual.id == s.id %}selected{% endif %}>{{ s.nombre }}</option>
+    {% endfor %}
+  </select>
+</form>
+{% endif %}
+
+{% if sucursal_actual %}
+<h2 class="fm-subheading">{{ sucursal_actual.nombre }}</h2>
+{% if stock %}
+<table class="fm-table">
+  <thead><tr><th>Producto</th><th>Código</th><th>Cantidad</th><th>Mínimo</th><th></th></tr></thead>
+  <tbody>
+    {% for s in stock %}
+    <tr>
+      <td>{{ s.producto.nombre }}</td>
+      <td>{{ s.producto.codigo }}</td>
+      <td>{{ s.cantidad }}</td>
+      <td>
+        {% if perfil.rol == 'dueno' %}
+        <form method="post" action="{% url 'inventario:actualizar_minimo' s.pk %}" style="display:flex;gap:4px;align-items:center;">
+          {% csrf_token %}
+          <input type="number" name="stock_minimo" value="{{ s.stock_minimo }}" step="1" min="0"
+                 class="fm-input" style="width:80px;padding:4px 8px;">
+          <button type="submit" class="btn btn-outline btn-sm">Guardar</button>
+        </form>
+        {% else %}
+          {{ s.stock_minimo }}
+        {% endif %}
+      </td>
+      <td>{% if s.bajo_minimo %}<span class="fm-tag">Stock bajo</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="fm-muted">Sin movimientos de inventario todavía en esta sucursal.</p>
+{% endif %}
+{% else %}
+  <p class="fm-muted">No hay sucursales registradas todavía.</p>
+{% endif %}
+{% endblock %}

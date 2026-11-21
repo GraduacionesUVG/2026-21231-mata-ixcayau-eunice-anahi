@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Pedido #{{ pedido.id }}{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+  <div class="fm-row fm-mb-24">
+    <h1 class="fm-heading-sm" style="margin:0;">Pedido #{{ pedido.id }}</h1>
+    {% if pedido.estado == 'completado' %}
+      <span class="fm-tag fm-tag-success">Completado</span>
+    {% else %}
+      <span class="fm-tag fm-tag-muted">Pendiente</span>
+    {% endif %}
+  </div>
+
+  <div class="fm-card-fog fm-mb-24">
+    <p><strong>Cliente:</strong> {{ pedido.cliente.nombre|default:"Sin cliente" }}</p>
+    <p><strong>Sucursal:</strong> {{ pedido.sucursal.nombre|default:"—" }}</p>
+    <p><strong>Creado:</strong> {{ pedido.creado_en|date:"d/m/Y H:i" }}{% if pedido.creado_por %} por {{ pedido.creado_por.nombre|default:pedido.creado_por.email }}{% endif %}</p>
+    <p {% if not pedido.venta_generada %}style="margin:0;"{% endif %}><strong>Completado:</strong> {{ pedido.completado_en|date:"d/m/Y H:i"|default:"—" }}</p>
+    {% if pedido.venta_generada %}
+    <p style="margin:0;">
+      <strong>Pasado a venta:</strong>
+      <a href="{% url 'ventas:detalle' pedido.venta_generada_id %}">Venta #{{ pedido.venta_generada_id }}</a>
+    </p>
+    {% endif %}
+  </div>
+
+  <table class="fm-table fm-mb-24">
+    <thead>
+      <tr>
+        <th>Producto</th><th>Proveedor</th><th>Cantidad</th><th>Precio</th>
+        <th>Ya pedido</th><th>Recibido</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for linea in lineas %}
+      <tr>
+        <td>{{ linea.producto.codigo }} - {{ linea.producto.nombre }}</td>
+        <td>{{ linea.producto.proveedor.nombre|default:"—" }}</td>
+        <td>{{ linea.cantidad }}</td>
+        <td>{{ linea.precio_unitario }}</td>
+        <td>
+          {% if pedido.estado == 'pendiente' %}
+          <form method="post" action="{% url 'pedidos:actualizar_linea' linea.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="recibido" value="{{ linea.recibido }}">
+            <label style="display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" name="ya_pedido" {% if linea.ya_pedido %}checked{% endif %}
+                     onchange="this.closest('form').submit()">
+              {% if linea.ya_pedido_en %}<span class="fm-muted" style="font-size:var(--font-size-sm);">{{ linea.ya_pedido_en|date:"d/m/Y H:i" }}</span>{% endif %}
+            </label>
+          </form>
+          {% else %}
+            {% if linea.ya_pedido %}Sí{% else %}No{% endif %}
+            {% if linea.ya_pedido_en %}<div class="fm-muted" style="font-size:var(--font-size-sm);">{{ linea.ya_pedido_en|date:"d/m/Y H:i" }}</div>{% endif %}
+          {% endif %}
+        </td>
+        <td>
+          {% if pedido.estado == 'pendiente' %}
+          <form method="post" action="{% url 'pedidos:actualizar_linea' linea.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="ya_pedido" value="{% if linea.ya_pedido %}on{% endif %}">
+            <select name="recibido" class="fm-input" style="padding:4px 6px;" onchange="this.form.submit()">
+              {% for valor, etiqueta in linea.RECIBIDO_CHOICES %}
+              <option value="{{ valor }}" {% if linea.recibido == valor %}selected{% endif %}>{{ etiqueta }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          {% else %}
+            {{ linea.get_recibido_display }}
+          {% endif %}
+          {% if linea.recibido_en %}<div class="fm-muted" style="font-size:var(--font-size-sm);">{{ linea.recibido_en|date:"d/m/Y H:i" }}</div>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="fm-row" style="gap:8px;">
+    {% if pedido.estado == 'pendiente' %}
+    <form method="post" action="{% url 'pedidos:completar' pedido.pk %}" id="form-completar-pedido">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Completar pedido</button>
+    </form>
+    <a href="{% url 'pedidos:pedido_pdf' pedido.pk %}" class="btn btn-outline">Descargar PDF del pedido</a>
+    <a href="{% url 'pedidos:pendientes_por_proveedor_pdf' %}" class="btn btn-outline">PDF: pendientes por proveedor</a>
+    {% endif %}
+    {% if pedido.estado == 'completado' and pedido.cliente and pedido.sucursal and not pedido.venta_generada %}
+    <form method="post" action="{% url 'pedidos:convertir_a_venta' pedido.pk %}" id="form-pasar-a-venta">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Pasar a venta</button>
+    </form>
+    {% endif %}
+    <a href="{% url 'pedidos:lista' %}" class="btn btn-ghost">← Ver todos los pedidos</a>
+  </div>
+</div>
+
+<script>
+var formCompletar = document.getElementById('form-completar-pedido');
+if (formCompletar) {
+  formCompletar.addEventListener('submit', function (e) {
+    e.preventDefault();
+    fmConfirmar('¿Marcar este pedido como completado?', function () { formCompletar.submit(); });
+  });
+}
+
+var formPasarAVenta = document.getElementById('form-pasar-a-venta');
+if (formPasarAVenta) {
+  formPasarAVenta.addEventListener('submit', function (e) {
+    e.preventDefault();
+    fmConfirmar(
+      '¿Pasar este pedido a una venta terminada de ' + '{{ pedido.cliente.nombre|escapejs }}' + '? Esto descuenta el inventario de ' + '{{ pedido.sucursal.nombre|escapejs }}' + '.',
+      function () { formPasarAVenta.submit(); }
+    );
+  });
+}
+</script>
+{% endblock %}

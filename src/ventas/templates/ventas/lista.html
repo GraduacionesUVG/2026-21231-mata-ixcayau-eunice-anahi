@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Ventas{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Ventas</h1>
+  <div class="fm-row" style="gap:8px;">
+    <a href="{% url 'ventas:cierre_diario' %}" class="btn btn-outline">Cierre de hoy</a>
+    <a href="{% url 'ventas:registrar' %}" class="btn btn-primary">+ Nueva venta</a>
+  </div>
+</div>
+
+{% if ventas %}
+<table class="fm-table">
+  <thead><tr><th>#</th><th>Sucursal</th><th>Operador</th><th>Cliente</th><th>Total</th><th>Fecha</th><th></th></tr></thead>
+  <tbody>
+    {% for v in ventas %}
+    <tr>
+      <td>{{ v.id }}</td>
+      <td>{{ v.sucursal.nombre }}</td>
+      <td>{{ v.operador.nombre|default:v.operador.email|default:"—" }}</td>
+      <td>{{ v.cliente.nombre|default:"Anónimo" }}</td>
+      <td>{{ v.total }}</td>
+      <td>{{ v.fecha|date:"d/m/Y H:i" }}</td>
+      <td><a href="{% url 'ventas:detalle' v.pk %}" class="btn btn-outline btn-sm">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="fm-muted">Aún no hay ventas registradas.</p>
+{% endif %}
+{% endblock %}

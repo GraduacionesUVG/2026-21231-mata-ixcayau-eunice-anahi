@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Proveedores{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Proveedores</h1>
+  {% if perfil.rol == 'dueno' %}
+    <a href="{% url 'proveedores:crear' %}" class="btn btn-primary">+ Nuevo proveedor</a>
+  {% endif %}
+</div>
+
+{% if proveedores %}
+{% with mensaje_whatsapp="Hola, le saludamos de "|add:empresa.nombre %}
+<table class="fm-table">
+  <thead><tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th></th></tr></thead>
+  <tbody>
+    {% for p in proveedores %}
+    <tr>
+      <td>{{ p.codigo }}</td>
+      <td>{{ p.nombre }}</td>
+      <td>{{ p.telefono|default:"—" }}</td>
+      <td style="display:flex;gap:8px;">
+        {% if p.telefono_whatsapp %}
+        <a href="https://wa.me/{{ p.telefono_whatsapp }}?text={{ mensaje_whatsapp|urlencode }}"
+           target="_blank" rel="noopener" class="btn btn-whatsapp btn-sm">WhatsApp</a>
+        {% endif %}
+        {% if perfil.rol == 'dueno' %}
+        <a href="{% url 'proveedores:editar' p.pk %}" class="btn btn-outline btn-sm">Editar</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endwith %}
+{% else %}
+  <p class="fm-muted">Aún no hay proveedores registrados.</p>
+{% endif %}
+{% endblock %}

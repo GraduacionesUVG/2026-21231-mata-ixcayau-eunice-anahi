@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Onboarding: marca{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <p class="fm-step-label">Paso 1 de 3</p>
+  <div class="fm-progress"><div class="fm-progress-bar" style="width:33%"></div></div>
+
+  <h1 class="fm-heading-sm">Elige tu marca</h1>
+  <div class="fm-card-fog fm-mb-24">
+    <p class="fm-muted fm-mb-24">Este color se usa como acento en tu cuenta. El logo se sube a Supabase Storage.</p>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="fm-field fm-radio-list">
+        <label class="fm-label">Color de marca</label>
+        {{ form.color_tema }}
+      </div>
+      <div class="fm-field">
+        {{ form.logo.label_tag }}
+        {{ form.logo }}
+        {% if form.logo.errors %}<div class="fm-errors">{{ form.logo.errors|join:", " }}</div>{% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Siguiente</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

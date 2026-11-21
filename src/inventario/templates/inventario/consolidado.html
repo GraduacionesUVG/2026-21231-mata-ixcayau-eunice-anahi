@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Inventario consolidado{% endblock %}
+{% block content %}
+<h1 class="fm-heading">Inventario consolidado</h1>
+{% if stock %}
+<table class="fm-table">
+  <thead><tr><th>Producto</th><th>Sucursal</th><th>Cantidad</th><th>Mínimo</th><th></th></tr></thead>
+  <tbody>
+    {% for s in stock %}
+    <tr>
+      <td>{{ s.producto.nombre }}</td>
+      <td>{{ s.sucursal.nombre }}</td>
+      <td>{{ s.cantidad }}</td>
+      <td>{{ s.stock_minimo }}</td>
+      <td>{% if s.bajo_minimo %}<span class="fm-tag">Stock bajo</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="fm-muted">Aún no hay inventario registrado en ninguna sucursal.</p>
+{% endif %}
+{% endblock %}

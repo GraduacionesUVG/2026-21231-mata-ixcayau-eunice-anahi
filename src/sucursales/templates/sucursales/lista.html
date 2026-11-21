@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Sucursales{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Sucursales</h1>
+  {% if perfil.rol == 'dueno' %}
+    <a href="{% url 'sucursales:crear' %}" class="btn btn-primary">+ Nueva sucursal</a>
+  {% endif %}
+</div>
+
+{% if sucursales %}
+<table class="fm-table">
+  <thead>
+    <tr>
+      <th>Nombre</th><th>Código</th><th>Almacén</th><th>Punto de venta</th><th>Ciudad</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in sucursales %}
+    <tr>
+      <td>{{ s.nombre }}</td>
+      <td>{{ s.codigo }}</td>
+      <td>{{ s.almacen.nombre }}</td>
+      <td>
+        {% if s.tiene_punto_venta %}
+          <span class="fm-tag">Sí</span>
+        {% else %}
+          <span class="fm-tag fm-tag-muted">No (solo bodega)</span>
+        {% endif %}
+      </td>
+      <td>{{ s.ciudad|default:"—" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="fm-muted">Aún no hay sucursales registradas.</p>
+{% endif %}
+{% endblock %}

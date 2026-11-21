@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión - Facil Modera{% endblock %}
+{% block content %}
+<div class="fm-auth-page" style="max-width:420px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Iniciar sesión</h1>
+  <div class="fm-card-fog fm-mb-24">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="fm-field">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {% if form.email.errors %}<div class="fm-errors">{{ form.email.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        {% if form.password.errors %}<div class="fm-errors">{{ form.password.errors|join:", " }}</div>{% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

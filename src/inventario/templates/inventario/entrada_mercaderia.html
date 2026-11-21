@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Entrada de mercadería{% endblock %}
+{% block content %}
+<div style="max-width:720px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Entrada de mercadería</h1>
+  <div class="fm-card-fog">
+    <p class="fm-muted fm-mb-24">
+      Registra lo que llegó del proveedor. Al confirmar, actualiza el stock de inmediato.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="fm-field">
+        {{ form.proveedor.label_tag }}
+        {{ form.proveedor }}
+        {% if form.proveedor.errors %}<div class="fm-errors">{{ form.proveedor.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.sucursal_destino.label_tag }}
+        {{ form.sucursal_destino }}
+        {% if form.sucursal_destino.errors %}<div class="fm-errors">{{ form.sucursal_destino.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.nota.label_tag }}
+        {{ form.nota }}
+      </div>
+
+      {{ formset.management_form }}
+      <div class="fm-row" style="margin-bottom:8px;">
+        <p class="fm-label" style="margin-bottom:0;">Productos</p>
+        <button type="button" id="btn-agregar-linea" class="btn btn-outline btn-sm">+ Agregar otro producto</button>
+      </div>
+      <table class="fm-table fm-mb-24" id="tabla-lineas">
+        <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo</th></tr></thead>
+        <tbody>
+          {% for linea in formset %}
+          <tr>
+            <td>{{ linea.producto }}</td>
+            <td>{{ linea.cantidad }}</td>
+            <td>{{ linea.costo }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <template id="fila-template">
+        <tr>
+          <td>{{ formset.empty_form.producto }}</td>
+          <td>{{ formset.empty_form.cantidad }}</td>
+          <td>{{ formset.empty_form.costo }}</td>
+        </tr>
+      </template>
+      {% if formset.non_form_errors %}<div class="fm-errors fm-mb-24">{{ formset.non_form_errors }}</div>{% endif %}
+
+      <button type="submit" class="btn btn-primary btn-block">Registrar entrada</button>
+    </form>
+  </div>
+  <a href="{% url 'inventario:dashboard' %}" class="btn btn-ghost" style="padding-left:0;">← Cancelar</a>
+</div>
+
+<script>
+document.getElementById('btn-agregar-linea').addEventListener('click', function () {
+  var totalInput = document.getElementById('id_form-TOTAL_FORMS');
+  var index = parseInt(totalInput.value, 10);
+  var html = document.getElementById('fila-template').innerHTML.replace(/__prefix__/g, index);
+  document.querySelector('#tabla-lineas tbody').insertAdjacentHTML('beforeend', html);
+  totalInput.value = index + 1;
+});
+</script>
+{% endblock %}

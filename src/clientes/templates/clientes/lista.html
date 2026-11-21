@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Clientes</h1>
+  {% if perfil.rol == 'dueno' %}
+    <a href="{% url 'clientes:crear' %}" class="btn btn-primary">+ Nuevo cliente</a>
+  {% endif %}
+</div>
+
+{% if clientes %}
+{% with mensaje_whatsapp="Hola, le saludamos de "|add:empresa.nombre %}
+<table class="fm-table">
+  <thead>
+    <tr>
+      <th>Nombre</th><th>Teléfono</th><th>Estado</th><th></th>
+      {% if perfil.rol == 'dueno' %}<th></th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in clientes %}
+    <tr>
+      <td>{{ c.nombre }}</td>
+      <td>{{ c.telefono|default:"—" }}</td>
+      <td>
+        {% if c.activo %}<span class="fm-tag fm-tag-success">Activo</span>{% else %}<span class="fm-tag fm-tag-muted">Inactivo</span>{% endif %}
+      </td>
+      <td>
+        {% if c.telefono_whatsapp %}
+        <a href="https://wa.me/{{ c.telefono_whatsapp }}?text={{ mensaje_whatsapp|urlencode }}"
+           target="_blank" rel="noopener" class="btn btn-whatsapp btn-sm">WhatsApp</a>
+        {% endif %}
+      </td>
+      {% if perfil.rol == 'dueno' %}
+      <td><a href="{% url 'clientes:editar' c.pk %}" class="btn btn-outline btn-sm">Editar</a></td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endwith %}
+{% else %}
+  <p class="fm-muted">Aún no hay clientes registrados.</p>
+{% endif %}
+{% endblock %}
