@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Usuarios</h1>
+  <a href="{% url 'usuarios:crear' %}" class="btn btn-primary">+ Nuevo vendedor</a>
+</div>
+
+{% if vendedores %}
+<table class="fm-table">
+  <thead><tr><th>Nombre</th><th>Correo</th><th>Sucursal</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+    {% for v in vendedores %}
+    <tr>
+      <td>{{ v.nombre|default:"—" }}</td>
+      <td>{{ v.email }}</td>
+      <td>{{ v.sucursal.nombre|default:"—" }}</td>
+      <td>
+        {% if v.activo %}<span class="fm-tag fm-tag-success">Activo</span>{% else %}<span class="fm-tag fm-tag-muted">Desactivado</span>{% endif %}
+      </td>
+      <td>
+        <form method="post" action="{% url 'usuarios:toggle' v.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline btn-sm">
+            {% if v.activo %}Desactivar{% else %}Activar{% endif %}
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="fm-muted">Aún no hay vendedores registrados.</p>
+{% endif %}
+{% endblock %}

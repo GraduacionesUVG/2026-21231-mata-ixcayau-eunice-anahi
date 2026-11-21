@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-24">
+  <h1 class="fm-heading" style="margin:0;">Reportes</h1>
+  <a href="{% url 'reportes:dashboard_pdf' %}?meses={{ rango_meses }}" class="btn btn-outline">Descargar PDF</a>
+</div>
+
+<div class="fm-grid fm-mb-36">
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;">{{ n_sucursales }}</div>
+    <div class="fm-muted">Sucursales</div>
+  </div>
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;">{{ n_vendedores }}</div>
+    <div class="fm-muted">Vendedores</div>
+  </div>
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;">{{ n_productos }}</div>
+    <div class="fm-muted">Productos</div>
+  </div>
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;" title="{{ producto_top_nombre }}">{{ producto_top_nombre|truncatechars:22 }}</div>
+    <div class="fm-muted">Producto más vendido{% if producto_top_cantidad %} · {{ producto_top_cantidad }} unid.{% endif %}</div>
+  </div>
+  {% if stock_bajo_count %}
+  <a href="{% url 'inventario:consolidado' %}" class="fm-card-fog" style="text-decoration:none;color:inherit;display:block;">
+    <div class="fm-heading-sm" style="margin-bottom:4px;color:#b02a2a;">{{ stock_bajo_count }}</div>
+    <div class="fm-muted">Productos con stock bajo</div>
+  </a>
+  {% else %}
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;">0</div>
+    <div class="fm-muted">Productos con stock bajo</div>
+  </div>
+  {% endif %}
+</div>
+
+<form method="get" class="fm-field" style="max-width:220px;">
+  <label class="fm-label" for="id_meses">Rango de los gráficos mensuales</label>
+  <select name="meses" id="id_meses" class="fm-input" onchange="this.form.submit()">
+    {% for opcion in rangos_meses %}
+    <option value="{{ opcion }}" {% if rango_meses == opcion %}selected{% endif %}>Últimos {{ opcion }} meses</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="fm-card-fog fm-mb-24">
+  <h2 class="fm-subheading">Ventas mensuales (últimos {{ rango_meses }} meses)</h2>
+  <div class="fm-barchart">
+    {% for m in ventas_mensuales %}
+    <div class="fm-bar-col">
+      <div class="fm-bar-value">{{ m.total }}</div>
+      <div class="fm-bar-track">
+        <div class="fm-bar-fill{% if m.actual %} fm-bar-fill-accent{% endif %}"
+             style="height:{{ m.pct }}%;" title="{{ m.etiqueta }}: {{ m.total }} ventas"></div>
+      </div>
+      <div class="fm-bar-label">{{ m.etiqueta }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="fm-card-fog fm-mb-24">
+  <h2 class="fm-subheading">Producto más vendido por mes (últimos {{ rango_meses }} meses)</h2>
+  <div class="fm-barchart">
+    {% for m in ventas_top_producto %}
+    <div class="fm-bar-col">
+      <div class="fm-bar-value" title="{% if m.producto %}{{ m.producto }} ({{ m.cantidad }} unid.){% else %}Sin ventas{% endif %}">
+        {% if m.producto %}{{ m.producto|truncatechars:10 }}{% else %}—{% endif %}
+      </div>
+      <div class="fm-bar-track">
+        <div class="fm-bar-fill{% if m.actual %} fm-bar-fill-accent{% endif %}" style="height:{{ m.pct }}%;"></div>
+      </div>
+      <div class="fm-bar-label">{{ m.etiqueta }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="fm-row" style="align-items:stretch;flex-wrap:wrap;">
+  <div class="fm-card-fog" style="flex:2;min-width:280px;">
+    <h2 class="fm-subheading">Ventas por sucursal este mes</h2>
+    {% if ventas_por_sucursal %}
+    <div class="fm-barchart">
+      {% for s in ventas_por_sucursal %}
+      <div class="fm-bar-col">
+        <div class="fm-bar-value">{{ s.total }}</div>
+        <div class="fm-bar-track">
+          <div class="fm-bar-fill{% if forloop.first %} fm-bar-fill-accent{% endif %}"
+               style="height:{{ s.pct }}%;" title="{{ s.etiqueta }}: {{ s.total }} ventas"></div>
+        </div>
+        <div class="fm-bar-label" title="{{ s.etiqueta }}">{{ s.etiqueta|truncatechars:14 }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="fm-muted">Sin ventas todavía este mes.</p>
+    {% endif %}
+  </div>
+
+  <div class="fm-card-fog" style="flex:1;min-width:240px;">
+    <h2 class="fm-subheading">Producto más vendido por proveedor (este mes)</h2>
+    {% if ventas_top_por_proveedor %}
+    <div class="fm-hbarchart">
+      {% for v in ventas_top_por_proveedor %}
+      <div class="fm-hbar-row">
+        <div class="fm-hbar-label">
+          <span class="fm-hbar-proveedor">{{ v.proveedor }}</span>
+          <span class="fm-hbar-producto" title="{{ v.producto }}">{{ v.producto|default:"Sin datos" }}</span>
+        </div>
+        <div class="fm-hbar-track">
+          <div class="fm-hbar-fill" style="width:{{ v.pct }}%;"></div>
+        </div>
+        <div class="fm-hbar-value">{{ v.cantidad }} unid.</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="fm-muted">Sin ventas de productos con proveedor este mes.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="fm-card-fog" style="margin-top:var(--spacing-24);">
+  <h2 class="fm-subheading">Margen de ganancia y clientes top</h2>
+  <form method="get" class="fm-row" style="gap:12px;align-items:flex-end;">
+    <input type="hidden" name="meses" value="{{ rango_meses }}">
+    <div class="fm-field" style="margin:0;">
+      <label class="fm-label" for="id_desde">Desde</label>
+      <input type="date" name="desde" id="id_desde" value="{{ fecha_desde|date:'Y-m-d' }}" class="fm-input">
+    </div>
+    <div class="fm-field" style="margin:0;">
+      <label class="fm-label" for="id_hasta">Hasta</label>
+      <input type="date" name="hasta" id="id_hasta" value="{{ fecha_hasta|date:'Y-m-d' }}" class="fm-input">
+    </div>
+    <button type="submit" class="btn btn-outline">Ver</button>
+  </form>
+</div>
+
+<div class="fm-row" style="align-items:stretch;flex-wrap:wrap;margin-top:var(--spacing-24);">
+  <div class="fm-card-fog" style="flex:2;min-width:320px;">
+    <h2 class="fm-subheading">Margen de ganancia por producto</h2>
+    {% if margen_por_producto %}
+    <div style="overflow-x:auto;">
+      <table class="fm-table">
+        <thead>
+          <tr>
+            <th>Código</th><th>Producto</th><th>Unidades</th><th>Ingresos</th><th>Costo</th><th>Margen</th><th>Margen %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in margen_por_producto %}
+          <tr{% if p.margen < 0 %} style="color:#b02a2a;"{% endif %}>
+            <td>{{ p.codigo }}</td>
+            <td>{{ p.nombre }}</td>
+            <td>{{ p.unidades }}</td>
+            <td>{{ p.ingresos }}</td>
+            <td>{{ p.costo }}</td>
+            <td>{{ p.margen }}</td>
+            <td>{% if p.margen_pct is not None %}{{ p.margen_pct }}%{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="fm-muted">Sin ventas de productos en este rango de fechas.</p>
+    {% endif %}
+  </div>
+
+  <div class="fm-card-fog" style="flex:1;min-width:260px;">
+    <h2 class="fm-subheading">Clientes que más compran</h2>
+    {% if clientes_top %}
+    <table class="fm-table">
+      <thead><tr><th>Cliente</th><th>Compras</th><th>Gasto total</th></tr></thead>
+      <tbody>
+        {% for c in clientes_top %}
+        <tr>
+          <td>{{ c.nombre }}</td>
+          <td>{{ c.num_compras }}</td>
+          <td>{{ c.gasto_total }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="fm-muted">Sin ventas con cliente identificado en este rango de fechas.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <h1 class="fm-heading-sm fm-heading-marked">Mi perfil</h1>
+  <div class="fm-card-fog fm-mb-24">
+    <p><strong>Nombre:</strong> {{ perfil.nombre|default:"—" }}</p>
+    <p><strong>Teléfono:</strong> {{ perfil.telefono|default:"—" }}</p>
+    <p><strong>Correo:</strong> {{ perfil.email }}</p>
+    <p><strong>Rol:</strong> {{ perfil.get_rol_display }}</p>
+    <p><strong>Empresa:</strong> {{ perfil.empresa.nombre }}</p>
+    {% if perfil.sucursal %}<p><strong>Sucursal:</strong> {{ perfil.sucursal.nombre }}</p>{% endif %}
+  </div>
+  <a href="{% url 'core:editar_datos_personales' %}" class="btn btn-primary">Editar datos personales</a>
+</div>
+{% endblock %}

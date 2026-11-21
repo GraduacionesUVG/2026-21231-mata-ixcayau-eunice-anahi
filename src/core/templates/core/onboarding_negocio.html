@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Onboarding: negocio{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <p class="fm-step-label">Paso 2 de 3</p>
+  <div class="fm-progress"><div class="fm-progress-bar" style="width:66%"></div></div>
+
+  <h1 class="fm-heading-sm">Datos de tu negocio</h1>
+  <div class="fm-card-fog fm-mb-24">
+    <p class="fm-muted fm-mb-24">Estos datos aparecerán en tus documentos y reportes.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+      <div class="fm-field">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}<div class="fm-errors">{{ field.errors|join:", " }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-block">Siguiente</button>
+    </form>
+  </div>
+  <a href="{% url 'core:onboarding_marca' %}" class="btn btn-ghost" style="padding-left:0;">← Atrás</a>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Cierre de ventas de hoy{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-24">
+  <h1 class="fm-heading" style="margin:0;">Cierre de ventas de hoy</h1>
+</div>
+<p class="fm-muted fm-mb-24">{{ hoy|date:"l d \d\e F \d\e Y" }}</p>
+
+{% if perfil.rol == 'dueno' %}
+<form method="get" class="fm-row fm-mb-24" style="gap:12px;align-items:flex-end;">
+  <div class="fm-field" style="margin:0;max-width:260px;">
+    <label class="fm-label" for="id_vendedor">Vendedor</label>
+    <select name="vendedor" id="id_vendedor" class="fm-input" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for v in vendedores %}
+      <option value="{{ v.id }}" {% if vendedor_id == v.id|stringformat:"s" %}selected{% endif %}>{{ v.nombre|default:v.email }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="fm-field" style="margin:0;max-width:260px;">
+    <label class="fm-label" for="id_sucursal_cierre">Sucursal</label>
+    <select name="sucursal" id="id_sucursal_cierre" class="fm-input" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% for s in sucursales %}
+      <option value="{{ s.id }}" {% if sucursal_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if vendedor_id or sucursal_id %}
+  <a href="{% url 'ventas:cierre_diario' %}" class="btn btn-ghost btn-sm">Quitar filtros</a>
+  {% endif %}
+</form>
+{% endif %}
+
+<div class="fm-grid fm-mb-36">
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;">{{ num_ventas }}</div>
+    <div class="fm-muted">Ventas de hoy</div>
+  </div>
+  <div class="fm-card-fog">
+    <div class="fm-heading-sm" style="margin-bottom:4px;">{{ total }}</div>
+    <div class="fm-muted">Total vendido hoy</div>
+  </div>
+</div>
+
+{% if ventas %}
+<table class="fm-table">
+  <thead>
+    <tr>
+      <th>#</th><th>Hora</th>
+      {% if perfil.rol == 'dueno' %}<th>Sucursal</th><th>Operador</th>{% endif %}
+      <th>Cliente</th><th>Total</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in ventas %}
+    <tr>
+      <td>{{ v.id }}</td>
+      <td>{{ v.fecha|date:"H:i" }}</td>
+      {% if perfil.rol == 'dueno' %}
+      <td>{{ v.sucursal.nombre }}</td>
+      <td>{{ v.operador.nombre|default:v.operador.email|default:"—" }}</td>
+      {% endif %}
+      <td>{{ v.cliente.nombre|default:"Anónimo" }}</td>
+      <td>{{ v.total }}</td>
+      <td><a href="{% url 'ventas:detalle' v.pk %}" class="btn btn-outline btn-sm">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="fm-muted">Todavía no hay ventas hoy{% if perfil.rol == 'dueno' and vendedor_id or sucursal_id %} con este filtro{% endif %}.</p>
+{% endif %}
+
+<a href="{% url 'ventas:lista' %}" class="btn btn-ghost" style="padding-left:0;margin-top:var(--spacing-24);">← Ver todas las ventas</a>
+{% endblock %}

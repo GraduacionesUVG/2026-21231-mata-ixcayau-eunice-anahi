@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{% if producto %}Editar producto{% else %}Nuevo producto{% endif %}{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <h1 class="fm-heading-sm">{% if producto %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+  <div class="fm-card-fog">
+    <form method="post" enctype="multipart/form-data" novalidate id="form-producto">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+      {% if producto.imagen_url %}
+      <div class="fm-field">
+        <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}" style="max-width:160px;border-radius:10px;">
+      </div>
+      {% endif %}
+      {% for field in form %}
+        {% if field.name == 'categorias' %}
+        <div class="fm-field">
+          <label class="fm-label fm-label-accent">Categorías</label>
+          <div class="fm-tag-editor" style="position:relative;">
+            <div id="categorias-chips" class="fm-chip-list"></div>
+            <input type="text" id="categorias-buscador" class="fm-input" placeholder="Buscar o crear categoría..." autocomplete="off">
+            <div id="categorias-dropdown" class="fm-dropdown" hidden></div>
+          </div>
+          <div id="categorias-hidden-inputs"></div>
+          {% if field.errors %}<div class="fm-errors">{{ field.errors|join:", " }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="fm-field">
+          {% if field.field.widget.input_type == 'checkbox' %}
+            <div style="display:flex;align-items:center;gap:8px;">{{ field }}{{ field.label_tag }}</div>
+          {% else %}
+            {{ field.label_tag }}
+            {{ field }}
+          {% endif %}
+          {% if field.name == 'codigo' %}
+          <p class="fm-muted" style="font-size:var(--font-size-sm);margin:4px 0 0;">
+            Si eliges un proveedor, el código se genera solo (código del proveedor + número).
+          </p>
+          {% endif %}
+          {% if field.errors %}<div class="fm-errors">{{ field.errors|join:", " }}</div>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-block">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<script type="application/json" id="categorias-disponibles-data">{{ categorias_disponibles_json|safe }}</script>
+<script type="application/json" id="categorias-seleccionadas-data">{{ categorias_seleccionadas_json|safe }}</script>
+<script>
+(function () {
+  var disponibles = JSON.parse(document.getElementById('categorias-disponibles-data').textContent);
+  var seleccionadas = JSON.parse(document.getElementById('categorias-seleccionadas-data').textContent);
+  var chipsEl = document.getElementById('categorias-chips');
+  var inputEl = document.getElementById('categorias-buscador');
+  var dropdownEl = document.getElementById('categorias-dropdown');
+  var hiddenContainer = document.getElementById('categorias-hidden-inputs');
+  var crearCategoriaUrl = "{% url 'productos:crear_categoria' %}";
+  var csrfToken = document.querySelector('#form-producto [name=csrfmiddlewaretoken]').value;
+
+  function estaSeleccionada(id) {
+    return seleccionadas.some(function (c) { return c.id === id; });
+  }
+
+  function renderChips() {
+    chipsEl.innerHTML = '';
+    hiddenContainer.innerHTML = '';
+    seleccionadas.forEach(function (cat) {
+      var chip = document.createElement('span');
+      chip.className = 'fm-chip';
+      chip.textContent = cat.nombre;
+
+      var quitar = document.createElement('button');
+      quitar.type = 'button';
+      quitar.className = 'fm-chip-quitar';
+      quitar.textContent = '×';
+      quitar.addEventListener('click', function () {
+        seleccionadas = seleccionadas.filter(function (c) { return c.id !== cat.id; });
+        renderChips();
+      });
+      chip.appendChild(quitar);
+      chipsEl.appendChild(chip);
+
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'categorias';
+      hidden.value = cat.id;
+      hiddenContainer.appendChild(hidden);
+    });
+  }
+
+  function cerrarDropdown() {
+    dropdownEl.hidden = true;
+    dropdownEl.innerHTML = '';
+  }
+
+  function agregarCategoria(cat) {
+    if (!estaSeleccionada(cat.id)) {
+      seleccionadas.push(cat);
+      renderChips();
+    }
+    inputEl.value = '';
+    inputEl.focus();
+    cerrarDropdown();
+  }
+
+  function crearCategoriaNueva(nombre) {
+    fmConfirmar('¿Crear la categoría "' + nombre + '"?', function () {
+      fetch(crearCategoriaUrl, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': csrfToken,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'nombre=' + encodeURIComponent(nombre),
+      })
+        .then(function (resp) {
+          return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
+        })
+        .then(function (resultado) {
+          if (!resultado.ok) {
+            alert(resultado.data.error || 'No se pudo crear la categoría.');
+            return;
+          }
+          var cat = resultado.data;
+          if (!disponibles.some(function (c) { return c.id === cat.id; })) {
+            disponibles.push(cat);
+          }
+          agregarCategoria(cat);
+        })
+        .catch(function () {
+          alert('No se pudo crear la categoría. Intenta de nuevo.');
+        });
+    });
+  }
+
+  function renderDropdown(texto) {
+    if (!texto) {
+      cerrarDropdown();
+      return;
+    }
+    var coincidencias = disponibles.filter(function (c) {
+      return c.nombre.toLowerCase().indexOf(texto.toLowerCase()) !== -1 && !estaSeleccionada(c.id);
+    });
+    dropdownEl.innerHTML = '';
+    coincidencias.forEach(function (cat) {
+      var item = document.createElement('div');
+      item.className = 'fm-dropdown-item';
+      item.textContent = cat.nombre;
+      item.addEventListener('click', function () { agregarCategoria(cat); });
+      dropdownEl.appendChild(item);
+    });
+    var hayExacta = disponibles.some(function (c) { return c.nombre.toLowerCase() === texto.toLowerCase(); });
+    if (!hayExacta) {
+      var crear = document.createElement('div');
+      crear.className = 'fm-dropdown-item fm-dropdown-item-crear';
+      crear.textContent = 'Crear categoría "' + texto + '"';
+      crear.addEventListener('click', function () { crearCategoriaNueva(texto); });
+      dropdownEl.appendChild(crear);
+    }
+    dropdownEl.hidden = coincidencias.length === 0 && hayExacta;
+  }
+
+  inputEl.addEventListener('input', function () { renderDropdown(inputEl.value.trim()); });
+  inputEl.addEventListener('focus', function () { if (inputEl.value.trim()) renderDropdown(inputEl.value.trim()); });
+  document.addEventListener('click', function (e) {
+    if (!dropdownEl.contains(e.target) && e.target !== inputEl) cerrarDropdown();
+  });
+
+  renderChips();
+})();
+
+// el código se autogenera en el servidor si hay proveedor elegido - solo
+// se deshabilita visualmente para que no parezca editable (un campo
+// disabled no se manda en el POST, así que el servidor nunca recibe lo
+// que haya quedado escrito ahí mientras estaba deshabilitado)
+(function () {
+  var selectProveedor = document.getElementById('id_proveedor');
+  var inputCodigo = document.getElementById('id_codigo');
+  if (!selectProveedor || !inputCodigo) return;
+
+  function actualizarEstadoCodigo() {
+    inputCodigo.disabled = !!selectProveedor.value;
+  }
+
+  selectProveedor.addEventListener('change', actualizarEstadoCodigo);
+  actualizarEstadoCodigo();
+})();
+</script>
+{% endblock %}

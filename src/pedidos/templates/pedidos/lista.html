@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Pedidos{% endblock %}
+{% block content %}
+<div class="fm-row fm-mb-36">
+  <h1 class="fm-heading" style="margin:0;">Pedidos</h1>
+  <div class="fm-row" style="gap:8px;">
+    <a href="{% url 'pedidos:pendientes_por_proveedor_pdf' %}" class="btn btn-outline">PDF: pendientes por proveedor</a>
+    <a href="{% url 'pedidos:crear' %}" class="btn btn-primary">+ Nuevo pedido</a>
+  </div>
+</div>
+
+{% if pedidos %}
+<table class="fm-table">
+  <thead>
+    <tr><th>#</th><th>Cliente</th><th>Productos</th><th>Estado</th><th>Creado</th><th>Completado</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for p in pedidos %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.cliente.nombre|default:"—" }}</td>
+      <td>{{ p.lineas.all|length }}</td>
+      <td>
+        {% if p.estado == 'completado' %}
+          <span class="fm-tag fm-tag-success">Completado</span>
+        {% else %}
+          <span class="fm-tag fm-tag-muted">Pendiente</span>
+        {% endif %}
+      </td>
+      <td>{{ p.creado_en|date:"d/m/Y H:i" }}</td>
+      <td>{{ p.completado_en|date:"d/m/Y H:i"|default:"—" }}</td>
+      <td><a href="{% url 'pedidos:detalle' p.pk %}" class="btn btn-outline btn-sm">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="fm-muted">Aún no hay pedidos registrados.</p>
+{% endif %}
+{% endblock %}

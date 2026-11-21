@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Inicio - {{ empresa.nombre }}{% endblock %}
+{% block content %}
+<h1 class="fm-heading">Hola, {{ empresa.nombre }}</h1>
+
+<div class="fm-grid">
+  {% for t in tarjetas %}
+  <div class="fm-card fm-stack">
+    <p class="fm-subheading" style="margin:0;">{{ t.nombre }}</p>
+    <div>
+      {% if t.activo %}
+        <span class="fm-tag fm-tag-success">Activado</span>
+      {% else %}
+        <span class="fm-tag fm-tag-muted">Desactivado</span>
+      {% endif %}
+      {% if not t.disponible %}
+        <span class="fm-tag fm-tag-muted">Próximamente</span>
+      {% endif %}
+    </div>
+    <div>
+      {% if t.disponible and t.activo %}
+        <a href="{% url t.url_name %}" class="btn btn-outline btn-sm">Abrir</a>
+      {% else %}
+        <button class="btn btn-outline btn-sm" disabled>
+          {% if t.disponible %}Actívalo en Onboarding{% else %}No construido aún{% endif %}
+        </button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

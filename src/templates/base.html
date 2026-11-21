@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Facil Modera{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'core/css/design.css' %}{% if design_css_version %}?v={{ design_css_version }}{% endif %}">
+  {% if empresa.color_hex %}
+  <style>:root{--color-accent:{{ empresa.color_hex }};--color-accent-ink:#ffffff;}</style>
+  {% endif %}
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% if request.user.is_authenticated and show_sidebar %}
+  <div class="fm-sidebar-overlay" onclick="document.body.classList.remove('fm-sidebar-open')"></div>
+  {% endif %}
+  <div class="fm-app">
+    {% if request.user.is_authenticated and show_sidebar %}
+    <aside class="fm-sidebar">
+      <a class="fm-logo fm-sidebar-header" href="{% url 'core:panel' %}">
+        {% if empresa.logo_url %}
+          <img src="{{ empresa.logo_url }}" alt="logo">
+        {% else %}
+          <span class="fm-logo-mark"></span>
+        {% endif %}
+        <span>{{ empresa.nombre|default:"Facil Modera" }}</span>
+      </a>
+
+      <nav class="fm-sidebar-nav">
+        <div class="fm-sidebar-section-label">Módulos</div>
+        <a href="{% url 'clientes:lista' %}" class="fm-sidebar-link{% if app_actual == 'clientes' %} fm-sidebar-link-active{% endif %}">Clientes</a>
+        <a href="{% url 'productos:lista' %}" class="fm-sidebar-link{% if app_actual == 'productos' %} fm-sidebar-link-active{% endif %}">Productos</a>
+        <a href="{% url 'inventario:dashboard' %}" class="fm-sidebar-link{% if app_actual == 'inventario' %} fm-sidebar-link-active{% endif %}">Inventario</a>
+        <a href="{% url 'ventas:lista' %}" class="fm-sidebar-link{% if app_actual == 'ventas' %} fm-sidebar-link-active{% endif %}">Ventas</a>
+        {% if perfil.rol == 'dueno' %}
+        {% if empresa.modulo_pedidos %}
+        <a href="{% url 'pedidos:lista' %}" class="fm-sidebar-link{% if app_actual == 'pedidos' %} fm-sidebar-link-active{% endif %}">Pedidos</a>
+        {% endif %}
+        {% if empresa.modulo_reportes %}
+        <a href="{% url 'reportes:dashboard' %}" class="fm-sidebar-link{% if app_actual == 'reportes' %} fm-sidebar-link-active{% endif %}">Reportes</a>
+        {% endif %}
+        {% endif %}
+      </nav>
+
+      <nav class="fm-sidebar-nav">
+        <div class="fm-sidebar-section-label">Empresa</div>
+        <a href="{% url 'sucursales:lista' %}" class="fm-sidebar-link{% if app_actual == 'sucursales' %} fm-sidebar-link-active{% endif %}">Sucursales</a>
+        {% if perfil.rol == 'dueno' %}
+        <a href="{% url 'proveedores:lista' %}" class="fm-sidebar-link{% if app_actual == 'proveedores' %} fm-sidebar-link-active{% endif %}">Proveedores</a>
+        <a href="{% url 'usuarios:lista' %}" class="fm-sidebar-link{% if app_actual == 'usuarios' %} fm-sidebar-link-active{% endif %}">Usuarios</a>
+        <a href="{% url 'core:editar_empresa' %}" class="fm-sidebar-link{% if request.resolver_match.url_name == 'editar_empresa' %} fm-sidebar-link-active{% endif %}">Configuración de empresa</a>
+        {% endif %}
+      </nav>
+
+      <div class="fm-sidebar-spacer"></div>
+
+      <div class="fm-sidebar-foot">
+        <a href="{% url 'core:mi_perfil' %}" class="fm-sidebar-link{% if request.resolver_match.url_name == 'mi_perfil' %} fm-sidebar-link-active{% endif %}">
+          Mi perfil{% if perfil.nombre %} ({{ perfil.nombre }}){% endif %}
+        </a>
+        <a href="{% url 'usuarios:seleccionar_operador' %}" class="fm-sidebar-link">
+          {% if request.session.operador_nombre %}Operador: {{ request.session.operador_nombre }}{% else %}Elegir operador{% endif %}
+        </a>
+        {% if request.session.operador_nombre %}
+        <form method="post" action="{% url 'usuarios:cerrar_operador' %}">
+          {% csrf_token %}
+          <button type="submit" class="fm-sidebar-link">Salir de operador</button>
+        </form>
+        <p class="fm-sidebar-hint">Cierra la sesión por completo.</p>
+        {% endif %}
+        <form method="post" action="{% url 'core:logout' %}" id="form-logout">
+          {% csrf_token %}
+          <button type="submit" class="fm-sidebar-link">Cerrar sesión</button>
+        </form>
+      </div>
+    </aside>
+    {% endif %}
+
+    <div class="fm-main">
+      {% if request.user.is_authenticated and show_sidebar %}
+      <header class="fm-topbar">
+        <button type="button" class="fm-topbar-menu-btn" onclick="document.body.classList.toggle('fm-sidebar-open')" aria-label="Abrir menú">☰</button>
+        <a class="fm-logo" href="{% url 'core:panel' %}" style="font-size:16px;">
+          {% if empresa.logo_url %}
+            <img src="{{ empresa.logo_url }}" alt="logo" style="width:20px;height:20px;">
+          {% else %}
+            <span class="fm-logo-mark" style="width:14px;height:14px;"></span>
+          {% endif %}
+          <span>{{ empresa.nombre|default:"Facil Modera" }}</span>
+        </a>
+      </header>
+      {% endif %}
+
+      <div class="fm-container fm-page">
+        {% for message in messages %}
+          <div class="fm-message">{{ message }}</div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-confirmar" class="fm-modal-overlay" hidden>
+    <div class="fm-modal">
+      <p id="modal-confirmar-texto" class="fm-mb-24"></p>
+      <div class="fm-modal-actions">
+        <button type="button" id="modal-confirmar-cancelar" class="btn btn-ghost">Cancelar</button>
+        <button type="button" id="modal-confirmar-aceptar" class="btn btn-primary">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-escaner" class="fm-modal-overlay" hidden>
+    <div class="fm-modal">
+      <p class="fm-mb-24" style="margin:0 0 12px;">Apunta la cámara al código de barras.</p>
+      <div id="escaner-lector" class="fm-escaner-video"></div>
+      <p id="escaner-error" class="fm-errors" style="display:none;margin-top:12px;"></p>
+      <div class="fm-modal-actions" style="margin-top:16px;">
+        <button type="button" id="btn-cancelar-escaner" class="btn btn-ghost">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="{% static 'core/js/escaner_codigo_barras.js' %}"></script>
+
+  <script>
+  // Reemplaza confirm() nativo del navegador (se veía como un popup de anuncio)
+  // por un modal propio. Uso: fmConfirmar('¿Seguro?', function () { ... }).
+  function fmConfirmar(texto, alConfirmar) {
+    var overlay = document.getElementById('modal-confirmar');
+    var btnAceptar = document.getElementById('modal-confirmar-aceptar');
+    var btnCancelar = document.getElementById('modal-confirmar-cancelar');
+    document.getElementById('modal-confirmar-texto').textContent = texto;
+    overlay.hidden = false;
+
+    function cerrar() {
+      overlay.hidden = true;
+      btnAceptar.removeEventListener('click', aceptar);
+      btnCancelar.removeEventListener('click', cancelar);
+      overlay.removeEventListener('click', clicFuera);
+    }
+    function aceptar() { cerrar(); alConfirmar(); }
+    function cancelar() { cerrar(); }
+    function clicFuera(e) { if (e.target === overlay) cancelar(); }
+
+    btnAceptar.addEventListener('click', aceptar);
+    btnCancelar.addEventListener('click', cancelar);
+    overlay.addEventListener('click', clicFuera);
+  }
+
+  var formLogout = document.getElementById('form-logout');
+  if (formLogout) {
+    formLogout.addEventListener('submit', function (e) {
+      e.preventDefault();
+      fmConfirmar('¿Cerrar sesión?', function () { formLogout.submit(); });
+    });
+  }
+  </script>
+</body>
+</html>

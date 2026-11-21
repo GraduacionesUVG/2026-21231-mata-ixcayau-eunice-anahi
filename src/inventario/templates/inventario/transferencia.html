@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Transferir inventario{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Transferir inventario</h1>
+  <div class="fm-card-fog">
+    <p class="fm-muted fm-mb-24">Mueve stock de una sucursal a otra.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+      <div class="fm-field">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}<div class="fm-errors">{{ field.errors|join:", " }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-block">Transferir</button>
+    </form>
+  </div>
+  <a href="{% url 'inventario:dashboard' %}" class="btn btn-ghost" style="padding-left:0;">← Cancelar</a>
+</div>
+{% endblock %}

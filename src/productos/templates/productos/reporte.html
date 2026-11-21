@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Reporte de productos{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Reporte de existencia en PDF</h1>
+  <p class="fm-muted" style="font-size:var(--font-size-sm);">
+    Elige categorías y/o proveedores (si no marcas ninguno, se incluyen todos)
+    y un rango de fechas. Se genera un PDF con la gráfica de existencia de
+    cada producto que coincida.
+  </p>
+  <div class="fm-card-fog">
+    <form method="get" action="{% url 'productos:reporte_pdf' %}" target="_blank" novalidate>
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="fm-field fm-checkbox-list">
+        {{ form.categorias.label_tag }}
+        {{ form.categorias }}
+        {% if form.categorias.errors %}<div class="fm-errors">{{ form.categorias.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      <div class="fm-field fm-checkbox-list">
+        {{ form.proveedores.label_tag }}
+        {{ form.proveedores }}
+        {% if form.proveedores.errors %}<div class="fm-errors">{{ form.proveedores.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      <div class="fm-field">
+        {{ form.fecha_desde.label_tag }}
+        {{ form.fecha_desde }}
+        {% if form.fecha_desde.errors %}<div class="fm-errors">{{ form.fecha_desde.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      <div class="fm-field">
+        {{ form.fecha_hasta.label_tag }}
+        {{ form.fecha_hasta }}
+        {% if form.fecha_hasta.errors %}<div class="fm-errors">{{ form.fecha_hasta.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Descargar PDF</button>
+      <a href="{% url 'productos:lista' %}" class="btn btn-ghost btn-block" style="margin-top:8px;">← Volver a productos</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

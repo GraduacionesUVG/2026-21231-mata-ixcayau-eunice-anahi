@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Nueva venta{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Nueva venta</h1>
+
+  {% if sucursales %}
+  <form method="get" class="fm-field" style="max-width:320px;">
+    <label class="fm-label" for="id_sucursal">Sucursal</label>
+    <select name="sucursal" id="id_sucursal" class="fm-input" onchange="this.form.submit()">
+      {% for s in sucursales %}
+      <option value="{{ s.id }}" {% if sucursal.id == s.id %}selected{% endif %}>{{ s.nombre }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% else %}
+  <p class="fm-muted fm-mb-24">Sucursal: {{ sucursal.nombre }}</p>
+  {% endif %}
+
+  <div class="fm-card-fog">
+    <p class="fm-muted fm-mb-24">
+      Por cada línea, elige un producto del catálogo (se valida contra el
+      stock de esta sucursal) o "Otro" para algo sin registrar (solo una
+      descripción, sin control de stock). El precio se sugiere con el
+      registrado para el producto, pero puedes cambiarlo libremente.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if sucursal %}<input type="hidden" name="sucursal" value="{{ sucursal.id }}">{% endif %}
+
+      <div class="fm-field" style="max-width:320px;">
+        {{ venta_form.cliente.label_tag }}
+        {{ venta_form.cliente }}
+        {% if venta_form.cliente.errors %}<div class="fm-errors">{{ venta_form.cliente.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      {{ formset.management_form }}
+
+      <div class="fm-row" style="margin-bottom:8px;">
+        <p class="fm-label" style="margin-bottom:0;">Productos</p>
+        <button type="button" id="btn-agregar-linea" class="btn btn-outline btn-sm">+ Agregar otro producto</button>
+      </div>
+      <table class="fm-table fm-mb-24" id="tabla-lineas">
+        <thead>
+          <tr>
+            <th>Producto</th><th>Descripción</th><th>Stock disponible</th><th>Precios de referencia</th><th>Cantidad</th><th>Precio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linea in formset %}
+          <tr class="fila-venta">
+            <td>
+              <div class="fm-venta-producto-picker" style="position:relative;">
+                <div class="fm-row" style="gap:4px;flex-wrap:nowrap;">
+                  <input type="text" class="fm-input fm-venta-producto-buscador" placeholder="Código o nombre..." autocomplete="off" style="flex:1;">
+                  {% if empresa.modulo_codigo_barras %}<button type="button" class="btn btn-outline btn-sm fm-venta-producto-escanear">Escanear</button>{% endif %}
+                </div>
+                <select class="fm-input fm-venta-producto-filtro-cat" style="margin-top:4px;font-size:var(--font-size-sm);">
+                  <option value="">Todas las categorías</option>
+                  {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+                </select>
+                <div class="fm-dropdown fm-venta-producto-dropdown" hidden></div>
+                <div class="fm-venta-producto-select-wrap" hidden>{{ linea.producto }}</div>
+              </div>
+            </td>
+            <td><span class="campo-descripcion" hidden>{{ linea.descripcion_libre }}</span></td>
+            <td><span class="stock-info fm-muted">—</span></td>
+            <td><span class="precios-info fm-muted">—</span></td>
+            <td>{{ linea.cantidad }}</td>
+            <td>{{ linea.precio_unitario }}</td>
+          </tr>
+          {% if linea.errors %}
+          <tr><td colspan="6"><div class="fm-errors">{{ linea.errors }}</div></td></tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <template id="fila-template">
+        <tr class="fila-venta">
+          <td>
+            <div class="fm-venta-producto-picker" style="position:relative;">
+              <div class="fm-row" style="gap:4px;flex-wrap:nowrap;">
+                <input type="text" class="fm-input fm-venta-producto-buscador" placeholder="Código o nombre..." autocomplete="off" style="flex:1;">
+                {% if empresa.modulo_codigo_barras %}<button type="button" class="btn btn-outline btn-sm fm-venta-producto-escanear">Escanear</button>{% endif %}
+              </div>
+              <select class="fm-input fm-venta-producto-filtro-cat" style="margin-top:4px;font-size:var(--font-size-sm);">
+                <option value="">Todas las categorías</option>
+                {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+              </select>
+              <div class="fm-dropdown fm-venta-producto-dropdown" hidden></div>
+              <div class="fm-venta-producto-select-wrap" hidden>{{ formset.empty_form.producto }}</div>
+            </div>
+          </td>
+          <td><span class="campo-descripcion" hidden>{{ formset.empty_form.descripcion_libre }}</span></td>
+          <td><span class="stock-info fm-muted">—</span></td>
+          <td><span class="precios-info fm-muted">—</span></td>
+          <td>{{ formset.empty_form.cantidad }}</td>
+          <td>{{ formset.empty_form.precio_unitario }}</td>
+        </tr>
+      </template>
+      {% if formset.non_form_errors %}<div class="fm-errors fm-mb-24">{{ formset.non_form_errors }}</div>{% endif %}
+
+      <button type="submit" class="btn btn-primary btn-block">Registrar venta</button>
+    </form>
+  </div>
+  <a href="{% url 'ventas:lista' %}" class="btn btn-ghost" style="padding-left:0;">← Cancelar</a>
+</div>
+
+<script>
+
+function indexarOpcionesProducto(select) {
+  var indice = [];
+  Array.prototype.forEach.call(select.options, function (opt) {
+    if (!opt.value || opt.value === 'otro') return;
+    indice.push({
+      id: opt.value,
+      texto: opt.textContent,
+      categorias: (opt.dataset.categorias || '').split(',').filter(Boolean),
+    });
+  });
+  return indice;
+}
+
+function activarBuscadorProducto(fila) {
+  var selectWrap = fila.querySelector('.fm-venta-producto-select-wrap');
+  var select = selectWrap.querySelector('select');
+  var input = fila.querySelector('.fm-venta-producto-buscador');
+  var filtroCategoria = fila.querySelector('.fm-venta-producto-filtro-cat');
+  var dropdown = fila.querySelector('.fm-venta-producto-dropdown');
+  var indice = indexarOpcionesProducto(select);
+
+  if (select.value && select.value !== 'otro') {
+    var actual = indice.filter(function (p) { return p.id === select.value; })[0];
+    if (actual) input.value = actual.texto;
+  } else if (select.value === 'otro') {
+    input.value = 'Otro (sin registrar)';
+  }
+
+  function cerrarDropdown() {
+    dropdown.hidden = true;
+    dropdown.innerHTML = '';
+  }
+
+  function elegir(id, texto) {
+    select.value = id;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    input.value = texto;
+    cerrarDropdown();
+  }
+
+  function render() {
+    var texto = input.value.trim().toLowerCase();
+    var catId = filtroCategoria.value;
+    if (!texto && !catId) {
+      cerrarDropdown();
+      return;
+    }
+
+    var coincidencias = indice.filter(function (p) {
+      var pasaTexto = !texto || p.texto.toLowerCase().indexOf(texto) !== -1;
+      var pasaCategoria = !catId || p.categorias.indexOf(catId) !== -1;
+      return pasaTexto && pasaCategoria;
+    });
+
+    dropdown.innerHTML = '';
+    if (!coincidencias.length) {
+      var vacio = document.createElement('div');
+      vacio.className = 'fm-dropdown-item fm-muted';
+      vacio.textContent = 'Sin resultados';
+      dropdown.appendChild(vacio);
+    }
+    coincidencias.slice(0, 40).forEach(function (p) {
+      var item = document.createElement('div');
+      item.className = 'fm-dropdown-item';
+      item.textContent = p.texto;
+      item.addEventListener('click', function () { elegir(p.id, p.texto); });
+      dropdown.appendChild(item);
+    });
+
+    var otro = document.createElement('div');
+    otro.className = 'fm-dropdown-item fm-dropdown-item-crear';
+    otro.textContent = 'Otro (sin registrar)';
+    otro.addEventListener('click', function () { elegir('otro', 'Otro (sin registrar)'); });
+    dropdown.appendChild(otro);
+
+    dropdown.hidden = false;
+  }
+
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  filtroCategoria.addEventListener('change', render);
+  document.addEventListener('click', function (e) {
+    if (!dropdown.contains(e.target) && e.target !== input && e.target !== filtroCategoria) {
+      cerrarDropdown();
+    }
+  });
+
+  var btnEscanear = fila.querySelector('.fm-venta-producto-escanear');
+  if (btnEscanear) {
+    btnEscanear.addEventListener('click', function () {
+      abrirEscanerCodigoBarras(function (codigoLeido) {
+        input.value = codigoLeido;
+        render();
+        // si el código leído coincide exacto con el de un producto, se
+        // selecciona directo - no hace falta hacer clic en la sugerencia
+        var exacto = indice.filter(function (p) {
+          return p.texto.split(' - ')[0].toLowerCase() === codigoLeido.toLowerCase();
+        })[0];
+        if (exacto) elegir(exacto.id, exacto.texto);
+      });
+    });
+  }
+}
+
+document.querySelectorAll('#tabla-lineas .fila-venta').forEach(activarBuscadorProducto);
+
+document.getElementById('btn-agregar-linea').addEventListener('click', function () {
+  var totalInput = document.getElementById('id_form-TOTAL_FORMS');
+  var index = parseInt(totalInput.value, 10);
+  var html = document.getElementById('fila-template').innerHTML.replace(/__prefix__/g, index);
+  document.querySelector('#tabla-lineas tbody').insertAdjacentHTML('beforeend', html);
+  totalInput.value = index + 1;
+  activarBuscadorProducto(document.querySelector('#tabla-lineas tbody').lastElementChild);
+});
+
+document.getElementById('tabla-lineas').addEventListener('change', function (e) {
+  var fila = e.target.closest('tr.fila-venta');
+  if (!fila) return;
+
+  if (e.target.matches('select[name$="-producto"]')) {
+    var opcion = e.target.selectedOptions[0];
+    var esOtro = e.target.value === 'otro';
+    var spanStock = fila.querySelector('.stock-info');
+    var spanPrecios = fila.querySelector('.precios-info');
+    var inputCantidad = fila.querySelector('input[name$="-cantidad"]');
+    var inputPrecio = fila.querySelector('input[name$="-precio_unitario"]');
+
+    fila.querySelector('.campo-descripcion').hidden = !esOtro;
+
+    if (opcion && opcion.dataset.stock !== undefined) {
+      spanStock.textContent = 'Stock: ' + opcion.dataset.stock;
+      inputCantidad.max = opcion.dataset.stock;
+    } else {
+      spanStock.textContent = '—';
+      inputCantidad.removeAttribute('max');
+    }
+
+    if (opcion && opcion.dataset.precio !== undefined) {
+      spanPrecios.textContent =
+        'Unitario: ' + opcion.dataset.precio +
+        ' · May. pequeño: ' + opcion.dataset.precioMp +
+        ' · May. grande: ' + opcion.dataset.precioMg;
+    } else {
+      spanPrecios.textContent = '—';
+    }
+
+    if (opcion && opcion.dataset.precio !== undefined && !inputPrecio.value) {
+      inputPrecio.value = opcion.dataset.precio;
+    }
+  }
+});
+</script>
+{% endblock %}

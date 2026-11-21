@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Nueva sucursal{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Nueva sucursal</h1>
+  <div class="fm-card-fog">
+    <p class="fm-muted fm-mb-24">
+      Al confirmar, se crea automáticamente el almacén de esta sucursal.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="fm-errors fm-mb-24">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+      <div class="fm-field {% if field.field.widget.input_type == 'checkbox' %}fm-checkbox-field{% endif %}">
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <div style="display:flex;align-items:center;gap:8px;">
+            {{ field }}{{ field.label_tag }}
+          </div>
+        {% else %}
+          {{ field.label_tag }}
+          {{ field }}
+        {% endif %}
+        {% if field.errors %}<div class="fm-errors">{{ field.errors|join:", " }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-block">Crear sucursal</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

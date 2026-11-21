@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta - Facil Modera{% endblock %}
+{% block content %}
+<div class="fm-auth-page" style="max-width:420px;margin:0 auto;">
+  <h1 class="fm-heading-sm">Crear cuenta</h1>
+  <p class="fm-muted fm-mb-24">Esto crea tu cuenta y tu empresa en Facil Modera.</p>
+  <div class="fm-card-fog fm-mb-24">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="fm-field">
+        {{ form.nombre.label_tag }}
+        {{ form.nombre }}
+        {% if form.nombre.errors %}<div class="fm-errors">{{ form.nombre.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.nombre_negocio.label_tag }}
+        {{ form.nombre_negocio }}
+        {% if form.nombre_negocio.errors %}<div class="fm-errors">{{ form.nombre_negocio.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {% if form.email.errors %}<div class="fm-errors">{{ form.email.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        {% if form.password.errors %}<div class="fm-errors">{{ form.password.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="fm-field">
+        {{ form.password2.label_tag }}
+        {{ form.password2 }}
+        {% if form.password2.errors %}<div class="fm-errors">{{ form.password2.errors|join:", " }}</div>{% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
+    </form>
+  </div>
+  <p class="fm-muted">¿Ya tienes cuenta? <a href="{% url 'core:login' %}">Inicia sesión</a></p>
+</div>
+{% endblock %}
